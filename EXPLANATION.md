@@ -327,3 +327,90 @@ clear separation of concerns, follows Spring Data pattern.
 - `src/main/java/org/springframework/samples/petclinic/service/ClinicService.java`
 - `src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java`
 
+### Implementation Phase
+**Status**: Completed
+
+**Files Modified**:
+- `ClinicService.java` - Service interface
+- `ClinicServiceImpl.java` - Service implementation
+- `OwnerRepository.java` - Added pagination methods to interface
+
+**Key Changes**:
+
+1. **ClinicService Interface**:
+   - Added `Page<Owner> findOwners(Pageable pageable)`
+   - Added `Page<Owner> findOwnersByLastName(String lastName, Pageable pageable)`
+   - Kept existing non-paginated methods for backward compatibility
+
+2. **OwnerRepository Interface**:
+   - Added `Page<Owner> findAll(Pageable pageable)`
+   - Added `Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable)`
+   - This allows service layer to call pagination methods through the interface
+
+3. **ClinicServiceImpl Implementation**:
+```java
+@Override
+@Transactional(readOnly = true)
+public Page<Owner> findOwners(Pageable pageable) throws DataAccessException {
+    return ownerRepository.findAll(pageable);
+}
+
+@Override
+@Transactional(readOnly = true)
+public Page<Owner> findOwnersByLastName(String lastName, Pageable pageable) throws DataAccessException {
+    return ownerRepository.findByLastNameStartingWith(lastName, pageable);
+}
+```
+
+**Design Decisions**:
+1. **Separate methods vs replacing existing**: Chose to add new methods to maintain backward compatibility
+2. **Service just delegates**: No business logic needed - straight pass-through to repository
+3. **Transactional annotations**: Same pattern as existing methods (`@Transactional(readOnly = true)`)
+4. **Repository interface update**: Had to add pagination methods to OwnerRepository interface since service uses the interface, not concrete implementation
+
+**Testing Notes**: Existing tests for non-paginated methods should still pass. Will add new tests for paginated methods.
+
+**Git Commit**: Ready for commit
+
+---
+
+## Step 5: Controller Layer Updates
+**Status**: Planning
+**Started**: 2026-01-27
+
+### Goal
+Update OwnerRestController to accept pagination parameters and return PagedResponse,
+while maintaining backward compatibility.
+
+### Current State Analysis
+- Controller implements `OwnersApi` interface (generated from OpenAPI spec)
+- `listOwners(String lastName)` returns `ResponseEntity<List<OwnerDto>>`
+- Uses `OwnerMapper` to convert Owner → OwnerDto
+- Returns 404 if empty, 200 otherwise
+
+### Challenge: OpenAPI Code Generation
+The controller implements an API interface generated from `openapi.yml`.
+We need to:
+1. Update the OpenAPI spec first
+2. Regenerate the API interface
+3. Implement the new interface method
+
+### Proposed Approach
+**Option A**: Create new endpoint `/owners/paged` to avoid breaking changes
+- Pro: Maintains backward compatibility completely
+- Con: Duplicate endpoints, inconsistent API
+
+**Option B**: Add optional pagination parameters to existing `/owners` endpoint
+- Pro: Same endpoint, cleaner API
+- Con: Changes existing endpoint behavior (but backward compatible if params are optional)
+
+**Decision**: Option B - Add optional pagination params to `/owners`
+- When pagination params absent: default to reasonable page size
+- Existing clients without params still work (get first page)
+- More RESTful - one resource, one endpoint
+
+### Files to Modify
+1. `src/main/resources/openapi.yml` - Add pagination parameters and response schema
+2. Regenerate API code (Maven build)
+3. `src/main/java/org/springframework/samples/petclinic/rest/controller/OwnerRestController.java` - Implement new signature
+

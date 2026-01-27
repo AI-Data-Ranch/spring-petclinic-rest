@@ -18,6 +18,8 @@ package org.springframework.samples.petclinic.repository;
 import java.util.Collection;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.model.BaseEntity;
 import org.springframework.samples.petclinic.model.Owner;
 
@@ -77,5 +79,21 @@ public interface OwnerRepository {
      */
 	void delete(Owner owner) throws DataAccessException;
 
+    /**
+     * Retrieve paginated <code>Owner</code>s from the data store.
+     *
+     * @param pageable pagination parameters
+     * @return a <code>Page</code> of <code>Owner</code>s
+     */
+    Page<Owner> findAll(Pageable pageable) throws DataAccessException;
+
+    /**
+     * Retrieve paginated <code>Owner</code>s by last name prefix.
+     *
+     * @param lastName prefix to search for
+     * @param pageable pagination parameters
+     * @return a <code>Page</code> of matching <code>Owner</code>s
+     */
+    Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable) throws DataAccessException;
 
 }

@@ -17,6 +17,8 @@ package org.springframework.samples.petclinic.service;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectRetrievalFailureException;
 import org.springframework.samples.petclinic.model.*;
 import org.springframework.samples.petclinic.repository.*;
@@ -124,6 +126,18 @@ public class ClinicServiceImpl implements ClinicService {
     @Transactional
     public void deleteOwner(Owner owner) throws DataAccessException {
         ownerRepository.delete(owner);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Owner> findOwners(Pageable pageable) throws DataAccessException {
+        return ownerRepository.findAll(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Owner> findOwnersByLastName(String lastName, Pageable pageable) throws DataAccessException {
+        return ownerRepository.findByLastNameStartingWith(lastName, pageable);
     }
 
     @Override

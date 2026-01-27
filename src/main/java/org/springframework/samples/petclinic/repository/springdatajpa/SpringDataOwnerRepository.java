@@ -44,9 +44,11 @@ public interface SpringDataOwnerRepository extends OwnerRepository, JpaRepositor
     @Query("SELECT owner FROM Owner owner left join fetch owner.pets WHERE owner.id =:id")
     Owner findById(@Param("id") int id);
 
+    @Override
     @Query("SELECT owner FROM Owner owner left join fetch owner.pets")
-    Page<Owner> findAllWithPets(Pageable pageable);
+    Page<Owner> findAll(Pageable pageable);
 
+    @Override
     @Query(value = "SELECT DISTINCT owner FROM Owner owner left join fetch owner.pets WHERE owner.lastName LIKE :lastName%",
            countQuery = "SELECT COUNT(DISTINCT owner) FROM Owner owner WHERE owner.lastName LIKE :lastName%")
     Page<Owner> findByLastNameStartingWith(@Param("lastName") String lastName, Pageable pageable);
