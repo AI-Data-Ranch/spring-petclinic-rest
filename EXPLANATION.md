@@ -239,3 +239,91 @@ Generic `PagedResponse<T>` class - reusable, clean API contract, easy to populat
 ### Files to Create
 - `src/main/java/org/springframework/samples/petclinic/rest/dto/PagedResponse.java`
 
+### Implementation Phase
+**Status**: Completed
+
+**Files Created**:
+- `PagedResponse.java` - Generic pagination response wrapper
+
+**Key Implementation Details**:
+```java
+public class PagedResponse<T> {
+    private List<T> content;
+    private int page;
+    private int size;
+    private long totalElements;
+    private int totalPages;
+    private boolean first;
+    private boolean last;
+    private int numberOfElements;
+    private boolean empty;
+    
+    public static <T> PagedResponse<T> of(Page<T> page) { ... }
+}
+```
+
+**Design Decisions**:
+1. **Generic Type `<T>`**: Allows reuse for any entity (Owner, Pet, Visit, etc.)
+2. **Jackson Annotations**: `@JsonProperty` ensures proper JSON serialization
+3. **Static Factory Method**: `of(Page<T>)` provides clean conversion from Spring's Page
+4. **All Page Metadata**: Includes all useful fields for client-side pagination UI
+   - `page` and `size`: Current pagination parameters
+   - `totalElements` and `totalPages`: For calculating pagination controls
+   - `first` and `last`: Boolean flags for UI edge cases
+   - `numberOfElements`: Actual count in current page (may be less than size on last page)
+   - `empty`: Quick check for no results
+
+**Usage Pattern**:
+```java
+Page<Owner> ownerPage = repository.findAll(pageable);
+List<OwnerDto> dtos = ownerMapper.toOwnerDtoCollection(ownerPage.getContent());
+Page<OwnerDto> dtoPage = // need to map Page<Owner> to Page<OwnerDto>
+PagedResponse<OwnerDto> response = PagedResponse.of(dtoPage);
+```
+
+**Challenge Identified**: Spring's Page is immutable. Need helper to map Page<Entity> → Page<DTO>.
+Will address in mapper or service layer.
+
+**Git Commit**: Ready for commit
+
+---
+
+## Step 4: Service Layer Modifications
+**Status**: Planning
+**Started**: 2026-01-27
+
+### Goal
+Add paginated methods to ClinicService interface and implementation,
+accepting Pageable parameters and returning Page<Owner>.
+
+### Current State Analysis
+- `ClinicService` interface has `findAllOwners()` returning `Collection<Owner>`
+- `ClinicServiceImpl` delegates directly to repository
+- Transactions managed with `@Transactional(readOnly = true)`
+- Need to maintain backward compatibility with existing methods
+
+### Proposed Approach
+1. Add new methods to `ClinicService` interface:
+   - `Page<Owner> findOwners(Pageable pageable)`
+   - `Page<Owner> findOwnersByLastName(String lastName, Pageable pageable)`
+2. Implement in `ClinicServiceImpl`:
+   - Call new repository methods
+   - Keep existing non-paginated methods for backward compatibility
+3. Mark old methods as `@Deprecated` in future versions (not now - minimize changes)
+
+### Alternatives Considered
+1. **Replace existing methods with paginated versions**
+   - Why not: Breaking change, might break other code/tests
+2. **Default parameter approach (Pageable = null means all)**
+   - Why not: Ambiguous API, harder to understand
+3. **Only paginated methods, no backward compatibility**
+   - Why not: Violates minimal change principle
+
+### Decision
+**Add new paginated methods alongside existing ones** - maintains backward compatibility,
+clear separation of concerns, follows Spring Data pattern.
+
+### Files to Modify
+- `src/main/java/org/springframework/samples/petclinic/service/ClinicService.java`
+- `src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java`
+
