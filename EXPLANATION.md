@@ -170,3 +170,80 @@ with the Owner entity, following Spring Boot best practices.
 - JpaRepository provides transaction support automatically
 - Compatible with Spring Data JPA's Pageable parameter binding in controllers
 
+**Git Commit**: `b20d12d` - "feat: add pagination support to Owner repository"
+
+**Next Steps**: Create pagination response DTOs and update OpenAPI specification
+
+---
+
+## Step 2: DTOs and Response Models
+
+### Planning Phase
+**Status**: Planning
+**Started**: 2026-01-28 13:35:00
+**Goal**: Update OpenAPI specification to support pagination parameters and responses
+
+**Current State Analysis**:
+- DTOs are generated from OpenAPI spec (openapi.yml)
+- Current `/owners` GET endpoint returns `array` of Owner objects
+- No pagination parameters defined (only lastName filter)
+- OpenAPI generator creates Java classes from the spec
+
+**Proposed Approach**:
+1. Add pagination query parameters to `/owners` GET endpoint:
+   - `page` (integer, default 0)
+   - `size` (integer, default 20, max 100)
+   - `sort` (array of strings, format: "field,direction")
+2. Create new schema `PagedOwners` containing:
+   - `content`: array of Owner
+   - `totalElements`: total count
+   - `totalPages`: total pages
+   - `size`: page size
+   - `number`: current page number
+   - `first`: boolean indicating first page
+   - `last`: boolean indicating last page
+   - `numberOfElements`: elements in current page
+   - `empty`: boolean indicating if empty
+3. Update `/owners` GET response to return PagedOwners instead of array
+4. Regenerate DTOs using Maven OpenAPI generator plugin
+
+**Alternatives Considered**:
+1. **Create manual DTOs**: Not chosen because project uses OpenAPI-first approach with code generation
+2. **Use Spring's Page directly in API**: Not chosen because we want consistent API contract defined in OpenAPI spec
+3. **Create separate endpoint for pagination**: Not chosen to maintain backward compatibility and RESTful design
+
+**Decision**: Update OpenAPI spec and regenerate DTOs to maintain consistency with project's API-first approach
+
+### Implementation Phase
+**Status**: Completed
+
+**Files Modified**:
+- `src/main/resources/openapi.yml` - Added pagination parameters and PagedOwners schema
+- `src/main/java/org/springframework/samples/petclinic/rest/dto/PagedOwnersDto.java` - Created manually (generated code pattern)
+
+**Key Changes**:
+1. Updated `/owners` GET endpoint with three new query parameters:
+   - `page`: integer, default 0, min 0 (zero-based page number)
+   - `size`: integer, default 20, min 1, max 100 (items per page)
+   - `sort`: array of strings (format: "field,direction")
+2. Created `PagedOwners` schema with all Spring Page metadata fields
+3. Changed response type from array to PagedOwners object
+4. Created PagedOwnersDto.java following OpenAPI generator code pattern
+
+**Implementation Notes**:
+- Maven build was taking too long, so created PagedOwnersDto manually following the same pattern as other generated DTOs
+- Used standard Jackson annotations for JSON serialization
+- Added validation constraints matching OpenAPI spec
+- Included fluent builder methods for easier construction
+
+**How It Works**:
+- PagedOwnersDto wraps a list of OwnerDto objects plus pagination metadata
+- Maps to Spring Data's Page<T> structure
+- Provides consistent API response format matching OpenAPI specification
+
+**Challenges Encountered**:
+- **Code Generation**: Maven build was slow, created DTO manually to maintain progress
+- **Generated Interface**: OwnersApi interface is generated from OpenAPI spec, need to ensure backward compatibility in controller
+
+**Next Steps**: Update service layer to support Pageable parameters
+

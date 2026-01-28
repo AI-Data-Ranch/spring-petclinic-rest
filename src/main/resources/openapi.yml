@@ -96,7 +96,7 @@ paths:
         - owner
       operationId: listOwners
       summary: Lists pet owners
-      description: Returns an array of pet owners.
+      description: Returns a paginated list of pet owners.
       parameters:
         - name: lastName
           in: query
@@ -105,6 +105,36 @@ paths:
           schema:
             type: string
             example: Davis
+        - name: page
+          in: query
+          description: Page number (zero-based).
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+            example: 0
+        - name: size
+          in: query
+          description: Number of items per page.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: sort
+          in: query
+          description: 'Sorting criteria in format: property,direction (e.g., lastName,asc). Multiple sort parameters are supported.'
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              example: lastName,asc
       responses:
         200:
           description: Owner details found and returned.
@@ -116,9 +146,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Owner'
+                $ref: '#/components/schemas/PagedOwners'
         304:
           description: Not modified.
           headers:
@@ -1936,6 +1964,86 @@ components:
               readOnly: true
           required:
             - pets
+    PagedOwners:
+      title: Paged Owners
+      description: A paginated list of pet owners with metadata.
+      type: object
+      properties:
+        content:
+          title: Content
+          description: The list of owners on the current page.
+          type: array
+          items:
+            $ref: '#/components/schemas/Owner'
+          readOnly: true
+        totalElements:
+          title: Total elements
+          description: The total number of owners across all pages.
+          type: integer
+          format: int64
+          minimum: 0
+          example: 100
+          readOnly: true
+        totalPages:
+          title: Total pages
+          description: The total number of pages.
+          type: integer
+          format: int32
+          minimum: 0
+          example: 5
+          readOnly: true
+        size:
+          title: Size
+          description: The number of items per page.
+          type: integer
+          format: int32
+          minimum: 0
+          example: 20
+          readOnly: true
+        number:
+          title: Number
+          description: The current page number (zero-based).
+          type: integer
+          format: int32
+          minimum: 0
+          example: 0
+          readOnly: true
+        numberOfElements:
+          title: Number of elements
+          description: The number of items in the current page.
+          type: integer
+          format: int32
+          minimum: 0
+          example: 20
+          readOnly: true
+        first:
+          title: First
+          description: Whether this is the first page.
+          type: boolean
+          example: true
+          readOnly: true
+        last:
+          title: Last
+          description: Whether this is the last page.
+          type: boolean
+          example: false
+          readOnly: true
+        empty:
+          title: Empty
+          description: Whether the page is empty.
+          type: boolean
+          example: false
+          readOnly: true
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - size
+        - number
+        - numberOfElements
+        - first
+        - last
+        - empty
     PetFields:
       title: Pet fields
       description: Editable fields of a pet.
