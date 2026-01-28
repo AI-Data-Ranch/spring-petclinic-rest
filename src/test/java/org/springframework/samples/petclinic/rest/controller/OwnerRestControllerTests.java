@@ -492,4 +492,209 @@ class OwnerRestControllerTests {
             .andExpect(status().isNotFound());
     }
 
+    // ==================== PAGINATION TESTS ====================
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedDefaultParameters() throws Exception {
+        // Create mock paginated data
+        List<Owner> ownerList = ownerMapper.toOwners(owners);
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(ownerList);
+        
+        given(this.clinicService.findOwners(org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.content").isArray())
+            .andExpect(jsonPath("$.content.length()").value(4))
+            .andExpect(jsonPath("$.page").exists())
+            .andExpect(jsonPath("$.size").exists())
+            .andExpect(jsonPath("$.totalElements").exists())
+            .andExpect(jsonPath("$.totalPages").exists())
+            .andExpect(jsonPath("$.first").exists())
+            .andExpect(jsonPath("$.last").exists());
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedWithPageParameter() throws Exception {
+        List<Owner> ownerList = ownerMapper.toOwners(owners);
+        org.springframework.data.domain.PageRequest pageRequest = 
+            org.springframework.data.domain.PageRequest.of(1, 2);
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(
+                ownerList.subList(2, 4), pageRequest, ownerList.size());
+        
+        given(this.clinicService.findOwners(org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .param("page", "1")
+                .param("size", "2")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.content").isArray())
+            .andExpect(jsonPath("$.content.length()").value(2))
+            .andExpect(jsonPath("$.page").value(1))
+            .andExpect(jsonPath("$.size").value(2))
+            .andExpect(jsonPath("$.totalElements").value(4))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.first").value(false))
+            .andExpect(jsonPath("$.last").value(true));
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedWithSortParameter() throws Exception {
+        List<Owner> ownerList = new ArrayList<>(ownerMapper.toOwners(owners));
+        // Sort by first name ascending
+        ownerList.sort((o1, o2) -> o1.getFirstName().compareTo(o2.getFirstName()));
+        
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(ownerList);
+        
+        given(this.clinicService.findOwners(org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .param("sort", "firstName,asc")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.content").isArray())
+            .andExpect(jsonPath("$.content[0].firstName").value("Betty"))
+            .andExpect(jsonPath("$.content[1].firstName").value("Eduardo"));
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedWithLastNameFilter() throws Exception {
+        // Filter to only Davis owners
+        List<OwnerDto> davisOwners = new ArrayList<>();
+        davisOwners.add(owners.get(1)); // Betty Davis
+        davisOwners.add(owners.get(3)); // Harold Davis
+        
+        List<Owner> ownerList = ownerMapper.toOwners(davisOwners);
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(ownerList);
+        
+        given(this.clinicService.findOwnersByLastName(
+                org.mockito.ArgumentMatchers.eq("Davis"), 
+                org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .param("lastName", "Davis")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.content").isArray())
+            .andExpect(jsonPath("$.content.length()").value(2))
+            .andExpect(jsonPath("$.content[0].lastName").value("Davis"))
+            .andExpect(jsonPath("$.content[1].lastName").value("Davis"))
+            .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedEmptyPage() throws Exception {
+        org.springframework.data.domain.Page<Owner> emptyPage = 
+            org.springframework.data.domain.Page.empty();
+        
+        given(this.clinicService.findOwners(org.mockito.ArgumentMatchers.any()))
+            .willReturn(emptyPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .param("page", "10")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.content").isArray())
+            .andExpect(jsonPath("$.content.length()").value(0))
+            .andExpect(jsonPath("$.empty").value(true))
+            .andExpect(jsonPath("$.totalElements").value(0))
+            .andExpect(jsonPath("$.totalPages").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedFirstPage() throws Exception {
+        List<Owner> ownerList = ownerMapper.toOwners(owners.subList(0, 2));
+        org.springframework.data.domain.PageRequest pageRequest = 
+            org.springframework.data.domain.PageRequest.of(0, 2);
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(
+                ownerList, pageRequest, 4);
+        
+        given(this.clinicService.findOwners(org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .param("page", "0")
+                .param("size", "2")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.first").value(true))
+            .andExpect(jsonPath("$.last").value(false))
+            .andExpect(jsonPath("$.numberOfElements").value(2));
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedWithMultipleSortFields() throws Exception {
+        List<Owner> ownerList = ownerMapper.toOwners(owners);
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(ownerList);
+        
+        given(this.clinicService.findOwners(org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .param("sort", "lastName,asc")
+                .param("sort", "firstName,desc")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPagedCombinedFilterAndPagination() throws Exception {
+        // Test combining lastName filter with pagination and sorting
+        List<OwnerDto> davisOwners = new ArrayList<>();
+        davisOwners.add(owners.get(1)); // Betty Davis
+        
+        List<Owner> ownerList = ownerMapper.toOwners(davisOwners);
+        org.springframework.data.domain.PageRequest pageRequest = 
+            org.springframework.data.domain.PageRequest.of(0, 1);
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(
+                ownerList, pageRequest, 2);
+        
+        given(this.clinicService.findOwnersByLastName(
+                org.mockito.ArgumentMatchers.eq("Davis"),
+                org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+        
+        this.mockMvc.perform(get("/api/owners/paged")
+                .param("lastName", "Davis")
+                .param("page", "0")
+                .param("size", "1")
+                .param("sort", "firstName,asc")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].lastName").value("Davis"))
+            .andExpect(jsonPath("$.page").value(0))
+            .andExpect(jsonPath("$.size").value(1))
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(2));
+    }
+
 }

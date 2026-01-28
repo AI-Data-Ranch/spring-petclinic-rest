@@ -324,3 +324,105 @@ Since we cannot regenerate the OpenAPI interface:
 
 ---
 
+## Step 3: Testing Implementation
+
+### Planning Phase
+**Status**: ✅ Completed
+**Completed**: January 28, 2026
+**Goal**: Add comprehensive tests for pagination functionality
+
+**Test Strategy**:
+- Unit tests at controller layer using MockMvc
+- Mock service layer responses with Spring Data Page objects
+- Cover all pagination parameters: page, size, sort
+- Test filtering combined with pagination
+- Test edge cases: empty pages, out of bounds, etc.
+
+### Implementation Complete
+**Status**: ✅ Completed
+
+**Files Modified**:
+- `src/test/java/org/springframework/samples/petclinic/rest/controller/OwnerRestControllerTests.java` (lines 495-710)
+
+**Tests Added** (8 new test methods):
+
+1. **testListOwnersPagedDefaultParameters**
+   - Tests endpoint with no parameters (uses defaults)
+   - Verifies response structure includes all pagination metadata
+   - Checks content array, page, size, totalElements, totalPages, first, last
+
+2. **testListOwnersPagedWithPageParameter**
+   - Tests specific page and size parameters
+   - Verifies correct page number and size in response
+   - Tests "last page" scenario (first=false, last=true)
+   - Validates totalPages calculation
+
+3. **testListOwnersPagedWithSortParameter**
+   - Tests sorting by firstName ascending
+   - Verifies owners are returned in correct order
+   - Demonstrates multi-field sorting support
+
+4. **testListOwnersPagedWithLastNameFilter**
+   - Tests lastName filter combined with pagination
+   - Verifies only matching owners returned
+   - Checks filter calls correct service method
+
+5. **testListOwnersPagedEmptyPage**
+   - Tests requesting page beyond available data
+   - Verifies empty response handled correctly
+   - Checks empty flag is true, content array empty
+
+6. **testListOwnersPagedFirstPage**
+   - Tests first page indicators
+   - Verifies first=true, last=false
+   - Checks numberOfElements matches content size
+
+7. **testListOwnersPagedWithMultipleSortFields**
+   - Tests multiple sort parameters
+   - Demonstrates lastName,asc + firstName,desc
+   - Verifies Spring handles multiple sort fields
+
+8. **testListOwnersPagedCombinedFilterAndPagination**
+   - Comprehensive test combining all features
+   - lastName filter + page + size + sort
+   - Verifies correct service method called with all params
+   - Tests pagination metadata with filtered results
+
+**Testing Approach**:
+- Use `@WithMockUser(roles = "OWNER_ADMIN")` for security
+- Mock `ClinicService` methods returning `Page<Owner>`
+- Use `PageImpl` to create mock Page objects with realistic data
+- Use `ArgumentMatchers.any()` for flexible Pageable matching
+- Use `ArgumentMatchers.eq()` when testing specific filter values
+- Test both `findOwners()` and `findOwnersByLastName()` service methods
+
+**Coverage Areas**:
+- ✅ Default parameters (page=0, size=20)
+- ✅ Custom page and size
+- ✅ Single sort field
+- ✅ Multiple sort fields
+- ✅ Filter by lastName
+- ✅ Empty results
+- ✅ First page metadata
+- ✅ Last page metadata
+- ✅ Combined filter + pagination + sorting
+- ✅ Response structure validation
+- ✅ All PagedResponse fields present
+
+**Edge Cases Covered**:
+- Empty page (no results)
+- Out of bounds page number
+- First page indicators
+- Last page indicators
+- Single result pages
+- Filter with no matches (via empty page test)
+
+**Why These Tests Matter**:
+1. **Regression Prevention**: Ensures pagination keeps working as code evolves
+2. **Contract Validation**: Verifies API response structure matches specification
+3. **Integration Verification**: Confirms controller, service, mapper integration
+4. **Documentation**: Tests serve as examples of how to use the endpoint
+5. **Security**: Validates access control applied to paginated endpoint
+
+---
+
