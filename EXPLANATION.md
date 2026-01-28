@@ -247,3 +247,65 @@ with the Owner entity, following Spring Boot best practices.
 
 **Next Steps**: Update service layer to support Pageable parameters
 
+---
+
+## Step 3: Service Layer Modifications
+
+### Planning Phase
+**Status**: Planning
+**Started**: 2026-01-28 13:42:00
+**Goal**: Add pagination methods to ClinicService interface and implementation
+
+**Current State Analysis**:
+- `ClinicService` interface has `findAllOwners()` and `findOwnerByLastName()` returning Collections
+- `ClinicServiceImpl` implements these methods using ownerRepository
+- No pagination support
+
+**Proposed Approach**:
+1. Add two new methods to `ClinicService` interface:
+   - `Page<Owner> findAllOwnersPaginated(Pageable pageable)`
+   - `Page<Owner> findOwnerByLastNamePaginated(String lastName, Pageable pageable)`
+2. Implement these in `ClinicServiceImpl` calling repository pagination methods
+3. Keep existing non-paginated methods for backward compatibility
+4. Use `@Transactional(readOnly = true)` for read operations
+
+**Alternatives Considered**:
+1. **Replace existing methods with paginated versions**: Not chosen to maintain backward compatibility
+2. **Add Pageable parameter to existing methods with default**: Not chosen because would change method signatures for existing callers
+
+**Decision**: Add new paginated methods alongside existing ones
+
+### Implementation Phase
+**Status**: Completed
+
+**Files Modified**:
+- `src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` - Added pagination method signatures
+- `src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` - Implemented pagination methods
+
+**Key Changes**:
+1. Added `Page` and `Pageable` imports to both files
+2. Added `findAllOwnersPaginated(Pageable)` method signature and implementation
+3. Added `findOwnerByLastNamePaginated(String, Pageable)` method signature and implementation
+4. Both implementations are transactional read-only for consistency
+5. Delegated to repository layer pagination methods
+
+**Implementation Notes**:
+- Simple delegation pattern - service layer passes through to repository
+- Transaction boundaries properly defined
+- Return type is Spring Data's `Page<Owner>` which contains both data and metadata
+
+**How It Works**:
+- Controller will call these service methods with Pageable parameter
+- Service delegates to repository pagination methods
+- Repository executes paginated query and returns Page<Owner>
+- Page object includes content, total elements, total pages, etc.
+
+**Integration Points**:
+- Called by controller layer
+- Calls repository pagination methods
+- Works within Spring's transaction management
+
+**Git Commit**: (pending)
+
+**Next Steps**: Update controller layer to accept pagination parameters and use service methods
+
