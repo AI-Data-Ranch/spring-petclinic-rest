@@ -135,3 +135,38 @@ with the Owner entity, following Spring Boot best practices.
 
 **Decision**: Use JpaRepository for comprehensive support with minimal code changes
 
+### Implementation Phase
+**Status**: Completed
+
+**Files Modified**:
+- `src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java` - Added pagination method signatures
+- `src/main/java/org/springframework/samples/petclinic/repository/springdatajpa/SpringDataOwnerRepository.java` - Extended JpaRepository and added paginated queries
+
+**Key Changes**:
+1. Changed `SpringDataOwnerRepository` from extending `Repository<Owner, Integer>` to `JpaRepository<Owner, Integer>`
+2. Added `findAllPaginated(Pageable)` method with custom @Query to handle EAGER fetch of pets
+3. Added `findByLastNameStartingWith(String, Pageable)` method for filtered pagination
+4. Used separate countQuery to avoid issues with fetch joins in count queries
+5. Used CONCAT in JPQL for lastName filtering (more portable than LIKE :param%)
+
+**Challenges Encountered**:
+- **EAGER Fetch with Pagination**: Owner entity has EAGER fetch for pets relationship. Direct use of JpaRepository.findAll(Pageable) could cause N+1 queries. Solution: Custom @Query with "left join fetch" and separate countQuery.
+- **LIKE Query Syntax**: Changed from `:lastName%` to `CONCAT(:lastName, '%')` for better JPQL portability across databases.
+
+**Implementation Notes**:
+- Kept existing non-paginated methods for backward compatibility
+- JpaRepository automatically provides save(), delete(), findAll() and other CRUD methods
+- Separate countQuery prevents "fetch cannot be used in count queries" error
+- DISTINCT in query prevents duplicate owners when joined with multiple pets
+
+**How It Works**:
+- `findAllPaginated(Pageable)`: Returns a Page of all owners with pagination metadata
+- `findByLastNameStartingWith(String, Pageable)`: Filters by lastName prefix and paginates
+- Spring Data JPA automatically implements these based on method signature and @Query annotation
+- Pageable parameter can include page number, size, and sort criteria
+
+**Integration Points**:
+- These methods will be called by the service layer
+- JpaRepository provides transaction support automatically
+- Compatible with Spring Data JPA's Pageable parameter binding in controllers
+

@@ -18,8 +18,10 @@ package org.springframework.samples.petclinic.repository.springdatajpa;
 import java.util.Collection;
 
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.samples.petclinic.model.Owner;
 import org.springframework.samples.petclinic.repository.OwnerRepository;
@@ -32,7 +34,7 @@ import org.springframework.samples.petclinic.repository.OwnerRepository;
  */
 
 @Profile("spring-data-jpa")
-public interface SpringDataOwnerRepository extends OwnerRepository, Repository<Owner, Integer> {
+public interface SpringDataOwnerRepository extends OwnerRepository, JpaRepository<Owner, Integer> {
 
     @Override
     @Query("SELECT DISTINCT owner FROM Owner owner left join fetch owner.pets WHERE owner.lastName LIKE :lastName%")
@@ -41,4 +43,12 @@ public interface SpringDataOwnerRepository extends OwnerRepository, Repository<O
     @Override
     @Query("SELECT owner FROM Owner owner left join fetch owner.pets WHERE owner.id =:id")
     Owner findById(@Param("id") int id);
+
+    @Query(value = "SELECT DISTINCT owner FROM Owner owner left join fetch owner.pets",
+           countQuery = "SELECT COUNT(DISTINCT owner) FROM Owner owner")
+    Page<Owner> findAllPaginated(Pageable pageable);
+
+    @Query(value = "SELECT DISTINCT owner FROM Owner owner left join fetch owner.pets WHERE owner.lastName LIKE CONCAT(:lastName, '%')",
+           countQuery = "SELECT COUNT(DISTINCT owner) FROM Owner owner WHERE owner.lastName LIKE CONCAT(:lastName, '%')")
+    Page<Owner> findByLastNameStartingWith(@Param("lastName") String lastName, Pageable pageable);
 }
