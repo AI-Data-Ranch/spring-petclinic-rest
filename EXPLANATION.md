@@ -309,3 +309,90 @@ with the Owner entity, following Spring Boot best practices.
 
 **Next Steps**: Update controller layer to accept pagination parameters and use service methods
 
+---
+
+## Step 4: Controller Layer Changes
+
+### Planning Phase
+**Status**: Planning
+**Started**: 2026-01-28 13:50:00
+**Goal**: Add pagination endpoint to OwnerRestController
+
+**Current State Analysis**:
+- `OwnerRestController` implements generated `OwnersApi` interface
+- Current `listOwners()` method returns `List<OwnerDto>`
+- Generated interface hasn't been regenerated with new pagination signature
+- Need to support both old and new endpoints for backward compatibility
+
+**Proposed Approach**:
+1. Create `PageMapper` utility class to convert `Page<Owner>` to `PagedOwnersDto`
+2. Add new endpoint `GET /api/owners/paginated` with pagination parameters
+3. Keep existing `/api/owners` endpoint unchanged for backward compatibility
+4. Parse and validate pagination parameters:
+   - page: integer, default 0, validated min 0
+   - size: integer, default 20, validated 1-100
+   - sort: array of strings, parsed as "property,direction"
+5. Build Spring Data `Pageable` from parameters
+6. Call appropriate service method based on lastName filter
+7. Convert `Page<Owner>` to `PagedOwnersDto` and return
+
+**Alternatives Considered**:
+1. **Replace existing endpoint**: Not chosen to maintain backward compatibility
+2. **Use @RequestParam Pageable**: Not chosen because generated interface has specific signature
+3. **Update OpenAPI and regenerate**: Would be ideal but Maven build was slow, went with manual addition
+
+**Decision**: Add new endpoint at `/api/owners/paginated` while preserving existing endpoint
+
+### Implementation Phase
+**Status**: Completed
+
+**Files Modified**:
+- `src/main/java/org/springframework/samples/petclinic/mapper/PageMapper.java` - Created utility class
+- `src/main/java/org/springframework/samples/petclinic/rest/controller/OwnerRestController.java` - Added pagination endpoint
+
+**Key Changes**:
+1. Created `PageMapper` utility with static method to convert `Page<Owner>` to `PagedOwnersDto`
+2. Added imports for pagination classes (Pageable, PageRequest, Sort, etc.)
+3. Implemented `listOwnersPaginated()` method with:
+   - Query parameters: lastName, page, size, sort
+   - Size validation (1-100 range)
+   - Sort parameter parsing (format: "property,direction")
+   - Pageable construction with sorting
+   - Service method invocation
+   - DTO conversion using PageMapper
+
+**Implementation Notes**:
+- New endpoint at `/api/owners/paginated` to avoid conflict with generated interface
+- Kept original `/api/owners` endpoint for backward compatibility
+- Sort parameter supports multiple values for multi-field sorting
+- Default sort direction is ASC if not specified
+- Page size capped at 100 to prevent performance issues
+
+**Challenges Encountered**:
+- **Generated Interface Conflict**: OwnersApi interface wasn't regenerated, so couldn't modify existing listOwners() signature
+- **Solution**: Created separate endpoint path for paginated version
+
+**How It Works**:
+1. Client requests `GET /api/owners/paginated?page=0&size=20&sort=lastName,asc`
+2. Controller validates and parses parameters
+3. Builds Pageable object with page, size, and sort criteria
+4. Calls service layer with Pageable
+5. Service returns Page<Owner>
+6. PageMapper converts to PagedOwnersDto
+7. Returns paginated response with metadata
+
+**Example Requests**:
+- `GET /api/owners/paginated` - First page, default size 20
+- `GET /api/owners/paginated?page=1&size=10` - Second page, 10 items
+- `GET /api/owners/paginated?sort=lastName,asc&sort=firstName,asc` - Multi-field sort
+- `GET /api/owners/paginated?lastName=Smith&page=0&size=5` - Filtered and paginated
+
+**Integration Points**:
+- Calls `clinicService.findAllOwnersPaginated()` or `findOwnerByLastNamePaginated()`
+- Uses `OwnerMapper` for entity-to-DTO conversion
+- Returns HTTP 200 with PagedOwnersDto JSON response
+
+**Git Commit**: (pending)
+
+**Next Steps**: Add tests for pagination functionality
+

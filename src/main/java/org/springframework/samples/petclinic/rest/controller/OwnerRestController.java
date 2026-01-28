@@ -16,10 +16,15 @@
 
 package org.springframework.samples.petclinic.rest.controller;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.samples.petclinic.mapper.OwnerMapper;
+import org.springframework.samples.petclinic.mapper.PageMapper;
 import org.springframework.samples.petclinic.mapper.PetMapper;
 import org.springframework.samples.petclinic.mapper.VisitMapper;
 import org.springframework.samples.petclinic.model.Owner;
@@ -29,13 +34,12 @@ import org.springframework.samples.petclinic.rest.api.OwnersApi;
 import org.springframework.samples.petclinic.rest.dto.*;
 import org.springframework.samples.petclinic.service.ClinicService;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.transaction.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -79,6 +83,53 @@ public class OwnerRestController implements OwnersApi {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(ownerMapper.toOwnerDtoCollection(owners), HttpStatus.OK);
+    }
+
+    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @GetMapping("/owners/paginated")
+    public ResponseEntity<PagedOwnersDto> listOwnersPaginated(
+            @RequestParam(required = false) String lastName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) List<String> sort) {
+        
+        // Validate page size
+        if (size > 100) {
+            size = 100;
+        }
+        if (size < 1) {
+            size = 1;
+        }
+        
+        // Build Pageable with sorting
+        Pageable pageable;
+        if (sort != null && !sort.isEmpty()) {
+            List<Sort.Order> orders = new ArrayList<>();
+            for (String sortParam : sort) {
+                String[] parts = sortParam.split(",");
+                String property = parts[0];
+                Sort.Direction direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1]) 
+                    ? Sort.Direction.DESC 
+                    : Sort.Direction.ASC;
+                orders.add(new Sort.Order(direction, property));
+            }
+            pageable = PageRequest.of(page, size, Sort.by(orders));
+        } else {
+            pageable = PageRequest.of(page, size);
+        }
+        
+        // Fetch paginated data
+        Page<Owner> ownerPage;
+        if (lastName != null && !lastName.isEmpty()) {
+            ownerPage = this.clinicService.findOwnerByLastNamePaginated(lastName, pageable);
+        } else {
+            ownerPage = this.clinicService.findAllOwnersPaginated(pageable);
+        }
+        
+        // Convert to DTO
+        PagedOwnersDto pagedOwnersDto = PageMapper.toPagedOwnersDto(ownerPage, ownerMapper);
+        
+        return new ResponseEntity<>(pagedOwnersDto, HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
