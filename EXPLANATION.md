@@ -396,3 +396,78 @@ with the Owner entity, following Spring Boot best practices.
 
 **Next Steps**: Add tests for pagination functionality
 
+---
+
+## Step 5: Testing Implementation
+
+### Planning Phase
+**Status**: Planning
+**Started**: 2026-01-28 14:05:00
+**Goal**: Add integration tests for pagination endpoints
+
+**Current State Analysis**:
+- Existing test file `OwnerRestControllerTests.java` with MockMvc tests
+- Uses @MockitoBean for ClinicService
+- Tests use @WithMockUser for security
+
+**Proposed Approach**:
+1. Add two pagination tests to OwnerRestControllerTests:
+   - Test basic pagination without filters
+   - Test pagination with lastName filter
+2. Mock service layer to return Page<Owner> objects
+3. Verify JSON response structure and pagination metadata
+4. Test parameter passing and response mapping
+
+**Alternatives Considered**:
+1. **Create separate test class**: Not chosen, better to keep tests together
+2. **Add repository-level tests**: Could add later, focusing on integration tests first
+
+**Decision**: Add pagination tests to existing controller test class
+
+### Implementation Phase
+**Status**: Completed
+
+**Files Modified**:
+- `src/test/java/org/springframework/samples/petclinic/rest/controller/OwnerRestControllerTests.java` - Added pagination tests
+- `src/main/resources/application.properties` - Added pagination configuration
+
+**Key Changes**:
+1. Added pagination configuration properties:
+   - `spring.data.web.pageable.default-page-size=20`
+   - `spring.data.web.pageable.max-page-size=100`
+   - `spring.data.web.pageable.one-indexed-parameters=false`
+
+2. Created `testListOwnersPaginated()`:
+   - Mocks 5 owners, returns page of 3
+   - Tests page metadata (totalElements, totalPages, size, number)
+   - Tests first/last page indicators
+   - Verifies JSON structure
+
+3. Created `testListOwnersPaginatedWithLastName()`:
+   - Tests pagination with lastName filter
+   - Verifies filtered results
+   - Tests single-page response
+
+**Implementation Notes**:
+- Used PageImpl to create mock Page objects
+- ArgumentMatchers.any() for Pageable parameter matching
+- JSONPath assertions for response validation
+- MockMvcResultHandlers.print() for debugging
+
+**How It Works**:
+- MockMvc performs GET request to /api/owners/paginated
+- Mocked service returns PageImpl with test data
+- Controller processes and returns PagedOwnersDto
+- Test verifies all pagination metadata fields
+
+**Test Coverage**:
+- ✓ Basic pagination (page, size parameters)
+- ✓ Pagination metadata (totalElements, totalPages, etc.)
+- ✓ Filtered pagination (with lastName)
+- ✓ First/last page indicators
+- ✓ JSON response structure
+
+**Git Commit**: (pending)
+
+**Next Steps**: Verify tests pass, document configuration, finalize implementation
+

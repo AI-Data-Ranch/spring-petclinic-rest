@@ -492,4 +492,77 @@ class OwnerRestControllerTests {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPaginated() throws Exception {
+        // Prepare test data
+        List<Owner> owners = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            Owner owner = new Owner();
+            owner.setId(i + 1);
+            owner.setFirstName("Owner" + i);
+            owner.setLastName("Test" + i);
+            owner.setAddress("Address " + i);
+            owner.setCity("City " + i);
+            owner.setTelephone("123456789" + i);
+            owners.add(owner);
+        }
+
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(owners.subList(0, 3), 
+                org.springframework.data.domain.PageRequest.of(0, 3), 5);
+
+        given(this.clinicService.findAllOwnersPaginated(org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+
+        this.mockMvc.perform(get("/api/owners/paginated?page=0&size=3")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.content").isArray())
+            .andExpect(jsonPath("$.content.length()").value(3))
+            .andExpect(jsonPath("$.totalElements").value(5))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.size").value(3))
+            .andExpect(jsonPath("$.number").value(0))
+            .andExpect(jsonPath("$.first").value(true))
+            .andExpect(jsonPath("$.last").value(false))
+            .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    @WithMockUser(roles = "OWNER_ADMIN")
+    void testListOwnersPaginatedWithLastName() throws Exception {
+        List<Owner> owners = new ArrayList<>();
+        Owner owner = new Owner();
+        owner.setId(1);
+        owner.setFirstName("George");
+        owner.setLastName("Franklin");
+        owner.setAddress("110 W. Liberty St.");
+        owner.setCity("Madison");
+        owner.setTelephone("6085551023");
+        owners.add(owner);
+
+        org.springframework.data.domain.Page<Owner> ownerPage = 
+            new org.springframework.data.domain.PageImpl<>(owners, 
+                org.springframework.data.domain.PageRequest.of(0, 20), 1);
+
+        given(this.clinicService.findOwnerByLastNamePaginated(
+                org.mockito.ArgumentMatchers.eq("Franklin"), 
+                org.mockito.ArgumentMatchers.any()))
+            .willReturn(ownerPage);
+
+        this.mockMvc.perform(get("/api/owners/paginated?lastName=Franklin&page=0&size=20")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.content").isArray())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].lastName").value("Franklin"))
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.first").value(true))
+            .andExpect(jsonPath("$.last").value(true))
+            .andDo(MockMvcResultHandlers.print());
+    }
+
 }
