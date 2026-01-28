@@ -50,6 +50,7 @@ API documentation (OAS 3.1) is accessible at: [http://localhost:9966/petclinic/v
 |-----------|------------|----------------|
 | **Owners** |  |  |
 | **GET** | `/api/owners` | Retrieve all pet owners |
+| **GET** | `/api/owners/paged` | **NEW:** Retrieve pet owners with pagination and sorting |
 | **GET** | `/api/owners/{ownerId}` | Get a pet owner by ID |
 | **POST** | `/api/owners` | Add a new pet owner |
 | **PUT** | `/api/owners/{ownerId}` | Update an owner’s details |
@@ -89,6 +90,95 @@ API documentation (OAS 3.1) is accessible at: [http://localhost:9966/petclinic/v
 | **DELETE** | `/api/visits/{visitId}` | Delete a visit |
 | **Users** |  |  |
 | **POST** | `/api/users` | Create a new user |
+
+## 📄 Pagination Support
+
+The API now supports pagination for listing owners, allowing efficient retrieval of large datasets.
+
+### **Paginated Owner Endpoint**
+
+**Endpoint:** `GET /api/owners/paged`
+
+### **Query Parameters**
+
+| **Parameter** | **Type** | **Default** | **Description** |
+|--------------|---------|------------|-----------------|
+| `page` | integer | 0 | Page number (zero-indexed) |
+| `size` | integer | 20 | Number of items per page (max: 100) |
+| `sort` | string[] | `lastName,asc` | Sort criteria: `field,direction` (e.g., `lastName,asc`) |
+| `lastName` | string | - | Optional filter: returns owners whose last name starts with this value |
+
+### **Example Requests**
+
+**Get first page with default settings:**
+```bash
+GET /petclinic/api/owners/paged
+```
+
+**Get specific page with custom size:**
+```bash
+GET /petclinic/api/owners/paged?page=1&size=10
+```
+
+**Sort by multiple fields:**
+```bash
+GET /petclinic/api/owners/paged?sort=lastName,asc&sort=firstName,desc
+```
+
+**Filter by last name with pagination:**
+```bash
+GET /petclinic/api/owners/paged?lastName=Davis&page=0&size=20
+```
+
+### **Response Format**
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "firstName": "George",
+      "lastName": "Franklin",
+      "address": "110 W. Liberty St.",
+      "city": "Madison",
+      "telephone": "6085551023",
+      "pets": [...]
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 100,
+  "totalPages": 5,
+  "first": true,
+  "last": false,
+  "numberOfElements": 20,
+  "empty": false
+}
+```
+
+### **Response Fields**
+
+| **Field** | **Type** | **Description** |
+|-----------|---------|-----------------|
+| `content` | array | List of owner objects for current page |
+| `page` | integer | Current page number (zero-indexed) |
+| `size` | integer | Number of items per page |
+| `totalElements` | integer | Total number of owners across all pages |
+| `totalPages` | integer | Total number of pages |
+| `first` | boolean | Whether this is the first page |
+| `last` | boolean | Whether this is the last page |
+| `numberOfElements` | integer | Number of items in current page |
+| `empty` | boolean | Whether the page is empty |
+
+### **Configuration**
+
+Pagination defaults can be configured in `application.properties`:
+
+```properties
+spring.data.web.pageable.default-page-size=20
+spring.data.web.pageable.max-page-size=100
+spring.data.web.pageable.one-indexed-parameters=false
+```
 
 
 ## Screenshot of the Angular client

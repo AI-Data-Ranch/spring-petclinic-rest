@@ -426,3 +426,129 @@ Since we cannot regenerate the OpenAPI interface:
 
 ---
 
+## Step 4: Configuration Setup
+
+### Implementation Complete
+**Status**: ✅ Completed
+**Completed**: January 28, 2026
+
+**Files Modified**:
+- `src/main/resources/application.properties` (lines 49-58)
+
+**Configuration Added**:
+```properties
+# Pagination Configuration
+spring.data.web.pageable.default-page-size=20
+spring.data.web.pageable.max-page-size=100
+spring.data.web.pageable.one-indexed-parameters=false
+```
+
+**Configuration Details**:
+
+1. **default-page-size=20**
+   - Sets default page size when client doesn't specify
+   - Chosen for good balance between performance and UX
+   - Reasonable for typical UI display (fits most screen sizes)
+
+2. **max-page-size=100**
+   - Prevents clients from requesting excessive data
+   - Protects against accidental DoS via large page requests
+   - Large enough for bulk operations but controlled
+   - Can be overridden per-endpoint if needed
+
+3. **one-indexed-parameters=false**
+   - Uses zero-based page indexing (page 0 is first page)
+   - Consistent with programming conventions
+   - Matches Spring Data Page API
+   - Aligns with common REST API practices
+
+**Why These Values**:
+- **20 items default**: Industry standard (GitHub, Stack Overflow use 20-30)
+- **100 items max**: Balances bulk operations with performance
+- **Zero-indexed**: Matches developer expectations and Spring conventions
+
+**Environment-Specific Overrides**:
+These settings can be overridden in profile-specific properties files:
+- `application-postgres.properties`
+- `application-mysql.properties`
+- `application-h2.properties`
+
+For example, production might use smaller defaults for better performance:
+```properties
+spring.data.web.pageable.default-page-size=10
+spring.data.web.pageable.max-page-size=50
+```
+
+---
+
+## Step 5: API Documentation Updates
+
+### Implementation Complete
+**Status**: ✅ Completed
+**Completed**: January 28, 2026
+
+**Files Modified**:
+- `readme.md` - Added comprehensive pagination documentation
+
+**Documentation Added**:
+
+1. **Updated API Endpoints Table**
+   - Added new row for `GET /api/owners/paged` endpoint
+   - Marked as **NEW** to highlight the feature
+
+2. **New "Pagination Support" Section** (lines 96-185)
+   - Comprehensive guide to using pagination
+   - Query parameter documentation with types and defaults
+   - Multiple example requests covering common use cases
+   - Complete response format with example JSON
+   - Field-by-field description of response structure
+   - Configuration options for customization
+
+**Documentation Highlights**:
+
+**Query Parameters Table**:
+- Clear types, defaults, and descriptions
+- Documents max size limit (100)
+- Explains zero-indexed pages
+- Shows sort parameter format and multiple sort support
+- Describes lastName filter behavior
+
+**Example Requests**:
+- Default behavior (no parameters)
+- Custom page and size
+- Multiple sort fields
+- Combined filter + pagination
+- Uses actual endpoint URLs with context path
+
+**Response Format**:
+- Real JSON example with actual data
+- Shows nested structure (pets array)
+- All pagination metadata fields included
+- Demonstrates first page response
+
+**Response Fields Table**:
+- Every field documented with type and description
+- Clarifies zero-indexed page numbers
+- Explains totalElements vs numberOfElements
+- Documents boolean flags (first, last, empty)
+
+**Configuration Section**:
+- Shows how to customize defaults
+- Lists all relevant Spring properties
+- Explains each configuration option
+
+**Why This Documentation Approach**:
+1. **Developer-Friendly**: Includes working examples developers can copy
+2. **Comprehensive**: Covers all features and edge cases
+3. **Reference Quality**: Table format for quick lookup
+4. **Visual**: Example JSON shows actual structure
+5. **Actionable**: Clear instructions for customization
+
+**Target Audiences**:
+- **Frontend Developers**: Example requests and response format
+- **Backend Developers**: Configuration and customization
+- **DevOps**: Configuration for different environments
+- **API Consumers**: Query parameters and response structure
+
+---
+
