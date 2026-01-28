@@ -95,19 +95,49 @@ paths:
       tags:
         - owner
       operationId: listOwners
-      summary: Lists pet owners
-      description: Returns an array of pet owners.
+      summary: Lists pet owners with pagination
+      description: Returns a paginated list of pet owners with optional filtering and sorting.
       parameters:
         - name: lastName
           in: query
-          description: Last name.
+          description: Last name filter (searches for owners whose last name starts with this value).
           required: false
           schema:
             type: string
             example: Davis
+        - name: page
+          in: query
+          description: Page number (zero-based).
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+            minimum: 0
+            example: 0
+        - name: size
+          in: query
+          description: Number of items per page.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+            minimum: 1
+            maximum: 100
+            example: 20
+        - name: sort
+          in: query
+          description: 'Sorting criteria in the format: property(,asc|desc). Multiple sort criteria are supported.'
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+            example: ["lastName,asc", "firstName,asc"]
       responses:
         200:
-          description: Owner details found and returned.
+          description: Paginated owner details found and returned.
           headers:
             ETag:
               description: An ID for this version of the response.
@@ -116,9 +146,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Owner'
+                $ref: '#/components/schemas/OwnerPage'
         304:
           description: Not modified.
           headers:
@@ -126,6 +154,12 @@ paths:
               description: An ID for this version of the response.
               schema:
                 type: string
+        400:
+          description: Bad request (invalid pagination parameters).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         500:
           description: Server error.
           content:
@@ -1936,6 +1970,104 @@ components:
               readOnly: true
           required:
             - pets
+    Pageable:
+      title: Pageable
+      description: Pagination metadata for the current page.
+      type: object
+      properties:
+        page:
+          title: Page number
+          description: Current page number (zero-based).
+          type: integer
+          format: int32
+          minimum: 0
+          example: 0
+          readOnly: true
+        size:
+          title: Page size
+          description: Number of items per page.
+          type: integer
+          format: int32
+          minimum: 1
+          example: 20
+          readOnly: true
+        sort:
+          title: Sort
+          description: Sorting criteria applied to this page.
+          type: array
+          items:
+            type: string
+          example: ["lastName,asc"]
+          readOnly: true
+      required:
+        - page
+        - size
+        - sort
+    OwnerPage:
+      title: Owner page
+      description: A paginated list of pet owners.
+      type: object
+      properties:
+        content:
+          title: Content
+          description: The list of pet owners for this page.
+          type: array
+          items:
+            $ref: '#/components/schemas/Owner'
+          readOnly: true
+        pageable:
+          $ref: '#/components/schemas/Pageable'
+        totalElements:
+          title: Total elements
+          description: Total number of pet owners across all pages.
+          type: integer
+          format: int64
+          minimum: 0
+          example: 100
+          readOnly: true
+        totalPages:
+          title: Total pages
+          description: Total number of pages.
+          type: integer
+          format: int32
+          minimum: 0
+          example: 5
+          readOnly: true
+        last:
+          title: Is last
+          description: Whether this is the last page.
+          type: boolean
+          example: false
+          readOnly: true
+        first:
+          title: Is first
+          description: Whether this is the first page.
+          type: boolean
+          example: true
+          readOnly: true
+        numberOfElements:
+          title: Number of elements
+          description: Number of items in the current page.
+          type: integer
+          format: int32
+          minimum: 0
+          example: 20
+          readOnly: true
+        empty:
+          title: Is empty
+          description: Whether the page is empty.
+          type: boolean
+          example: false
+          readOnly: true
+      required:
+        - content
+        - pageable
+        - totalElements
+        - totalPages
+        - last
+        - first
+        - numberOfElements
+        - empty
     PetFields:
       title: Pet fields
       description: Editable fields of a pet.

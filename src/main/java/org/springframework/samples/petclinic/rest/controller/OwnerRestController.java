@@ -16,6 +16,9 @@
 
 package org.springframework.samples.petclinic.rest.controller;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +35,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.transaction.Transactional;
@@ -79,6 +84,35 @@ public class OwnerRestController implements OwnersApi {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(ownerMapper.toOwnerDtoCollection(owners), HttpStatus.OK);
+    }
+
+    /**
+     * Get paginated list of owners with optional filtering and sorting.
+     *
+     * @param lastName Optional last name filter (searches for owners whose last name starts with this value)
+     * @param pageable Pagination and sorting parameters
+     * @return Paginated response with owner details
+     */
+    @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
+    @GetMapping("/owners/paged")
+    public ResponseEntity<PagedResponse<OwnerDto>> listOwnersPaged(
+            @RequestParam(required = false) String lastName,
+            @PageableDefault(size = 20, sort = "lastName") Pageable pageable) {
+        
+        Page<Owner> ownerPage;
+        if (lastName != null && !lastName.trim().isEmpty()) {
+            ownerPage = this.clinicService.findOwnersByLastName(lastName, pageable);
+        } else {
+            ownerPage = this.clinicService.findOwners(pageable);
+        }
+        
+        // Convert Page<Owner> to Page<OwnerDto>
+        Page<OwnerDto> ownerDtoPage = ownerPage.map(ownerMapper::toOwnerDto);
+        
+        // Wrap in PagedResponse
+        PagedResponse<OwnerDto> response = PagedResponse.of(ownerDtoPage);
+        
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole(@roles.OWNER_ADMIN)")
