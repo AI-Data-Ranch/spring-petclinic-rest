@@ -24,7 +24,7 @@
 - **Purpose**: REST API backend (no UI - consumed by separate Angular frontend)
 - **Port**: 9966
 - **Base Path**: `/petclinic/`
-- **API Documentation**: Swagger UI at `/petclinic/swagger-ui.html`
+- **API Documentation**: Swagger UI at `/petclinic/swagger-ui/index.html`
 
 ---
 
@@ -43,7 +43,7 @@
 - **Supported Databases**: H2 (default), HSQLDB, MySQL, PostgreSQL
 
 ### API & Documentation
-- **SpringDoc OpenAPI**: 2.7.0
+- **SpringDoc OpenAPI**: 2.8.13
 - **OpenAPI Generator**: 7.18.0 (DTO generation)
 - **Jackson**: JSON serialization
 - **MapStruct**: 1.6.3 (Entity ↔ DTO mapping)
@@ -129,8 +129,9 @@ BaseEntity (id: Integer)
 │   ├── Owner
 │   └── Vet
 └── Visit
-    └── User
-        └── Role
+
+User (username: String - PK)
+└── Role (ManyToOne → User)
 ```
 
 ### Core Entities
@@ -197,9 +198,9 @@ Three interchangeable implementations (activated via Spring profiles):
 
 | Implementation | Profile | Technology | Characteristics |
 |----------------|---------|-----------|-----------------|
-| **JDBC** | (default) | NamedParameterJdbcTemplate | Manual SQL, explicit row mapping |
+| **JDBC** | `jdbc` | NamedParameterJdbcTemplate | Manual SQL, explicit row mapping |
 | **JPA** | `jpa` | EntityManager | JPQL queries, JPA annotations |
-| **Spring Data JPA** | `spring-data-jpa` | Spring Data Repository | Declarative, auto-generated queries |
+| **Spring Data JPA** | `spring-data-jpa` (default) | Spring Data Repository | Declarative, auto-generated queries |
 
 ### Core Repository Interfaces
 
@@ -245,6 +246,14 @@ Collection<Specialty> findAll()
 void save(Specialty specialty)
 void delete(Specialty specialty)
 Set<Specialty> findSpecialtiesByNameIn(Set<String> names)
+```
+
+#### PetTypeRepository
+```java
+PetType findById(int id)
+Collection<PetType> findAll()
+void save(PetType petType)
+void delete(PetType petType)
 ```
 
 #### UserRepository
@@ -410,7 +419,7 @@ void save(User user)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Redirect to Swagger UI |
+| GET | `/` | Redirect to Swagger UI (/swagger-ui/index.html) |
 
 ### Exception Handling
 **ExceptionControllerAdvice** provides global exception handling:
@@ -458,8 +467,8 @@ When enabled:
 #### vets
 ```sql
 id (PK, AUTO_INCREMENT)
-first_name (VARCHAR(30))
-last_name (VARCHAR(30))
+first_name (VARCHAR(30) NOT NULL)
+last_name (VARCHAR(30) NOT NULL)
 ```
 
 #### specialties
@@ -495,7 +504,7 @@ telephone (VARCHAR(20))
 id (PK, AUTO_INCREMENT)
 name (VARCHAR(30))
 birth_date (DATE)
-type_id (FK → types.id)
+type_id (FK → types.id ON DELETE CASCADE)
 owner_id (FK → owners.id ON DELETE CASCADE)
 ```
 
@@ -510,7 +519,7 @@ description (VARCHAR(255))
 #### users
 ```sql
 username (PK, VARCHAR(20))
-password (VARCHAR(60))
+password (VARCHAR(255))
 enabled (BOOLEAN)
 ```
 
@@ -519,7 +528,7 @@ enabled (BOOLEAN)
 id (PK, AUTO_INCREMENT)
 username (FK → users.username)
 role (VARCHAR(20))
-UNIQUE(username, role)
+UNIQUE(role, username)
 ```
 
 ### Database Profiles
@@ -642,11 +651,10 @@ UNIQUE(username, role)
 
 #### Default (`application.properties`)
 ```properties
-spring.profiles.active=h2
+spring.profiles.active=h2,spring-data-jpa
 server.port=9966
 server.servlet.context-path=/petclinic
 petclinic.security.enable=false
-springdoc.swagger-ui.path=/swagger-ui.html
 ```
 
 #### Database Profiles
@@ -694,7 +702,7 @@ spring.jpa.database=POSTGRESQL
 ## Build & Deployment
 
 ### Maven Build
-**POM Version**: 3.0.2  
+**POM Version**: 3.4.3  
 **Java Version**: 17+  
 **Spring Boot Version**: 3.5.7
 
@@ -755,7 +763,7 @@ docker-compose down
 **Purpose**: API-first design, DTO generation
 
 ### Swagger UI
-**URL**: `http://localhost:9966/petclinic/swagger-ui.html`  
+**URL**: `http://localhost:9966/petclinic/swagger-ui/index.html`  
 **Features**:
 - Interactive API documentation
 - Try-out functionality
@@ -808,7 +816,7 @@ docker-compose down
 
 **Access Swagger UI**:
 1. Start application
-2. Navigate to `http://localhost:9966/petclinic/swagger-ui.html`
+2. Navigate to `http://localhost:9966/petclinic/swagger-ui/index.html`
 
 ---
 
@@ -839,5 +847,5 @@ docker-compose down
 ---
 
 **Last Updated**: 2026-01-30  
-**Version**: 3.0.2  
+**Version**: 3.4.3  
 **Maintainer**: Spring Samples Team
