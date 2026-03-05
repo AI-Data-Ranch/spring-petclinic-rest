@@ -49,7 +49,7 @@ public class BindingErrorsResponse {
         }
         boolean bothIdsSpecified = pathId != null && bodyId != null;
         if (bothIdsSpecified && !pathId.equals(bodyId)) {
-            addBodyIdError(bodyId, String.format("does not match pathId: %d", pathId));
+            addBodyIdError(bodyId, "does not match pathId: %d".formatted(pathId));
         }
     }
 
